@@ -1,6 +1,9 @@
 name: Cloud Hypervisor Linux Release
 on: [create]
 
+permissions:
+  contents: write
+
 jobs:
   release:
     if: github.event_name == 'create' && github.event.ref_type == 'tag'
