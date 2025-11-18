@@ -15,7 +15,7 @@ jobs:
        with:
         fetch-depth: 1
      - name: Install build tools
-       run: sudo apt install build-essential flex bison libssl-dev libelf-dev bc gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
+       run: sudo apt install -y build-essential flex bison libssl-dev libelf-dev bc gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
      - name: Configure (aarch64)
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make ch_defconfig
      - name: Build (aarch64)
