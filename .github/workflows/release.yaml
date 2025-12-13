@@ -64,45 +64,45 @@ jobs:
      # 4. Update NvidiaDriverVersion in hypeman/lib/system/versions.go
      # 5. Test GPU passthrough thoroughly before deploying
      # ============================================================
-    - name: Package NVIDIA driver libraries (x86-64)
-      run: |
-        DRIVER_VERSION=570.86.16
-        
-        mkdir -p nvidia-driver-libs/usr/lib/nvidia
-        mkdir -p nvidia-driver-libs/usr/bin
-        
-        # Essential libraries for CUDA inference (minimal set to keep initrd small)
-        # libcuda.so - CUDA driver API (required for all GPU compute) ~68MB
-        cp nvidia-driver/libcuda.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-        # libnvidia-ml.so - NVML for nvidia-smi and GPU monitoring ~2MB
-        cp nvidia-driver/libnvidia-ml.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-        # libnvidia-ptxjitcompiler.so - PTX JIT compilation ~37MB
-        cp nvidia-driver/libnvidia-ptxjitcompiler.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-        
-        # Small utility libraries
-        cp nvidia-driver/libnvidia-allocator.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-        cp nvidia-driver/libnvidia-cfg.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-        
-        # Note: The following large libraries are NOT included to keep initrd small:
-        # - libnvidia-nvvm.so (~79MB) - Only needed for CUDA runtime compilation
-        # - libnvidia-gpucomp.so (~61MB) - Only needed for some compute workloads
-        # - libnvidia-opencl.so (~63MB) - Only needed for OpenCL (not CUDA)
-        # - libnvcuvid.so (~16MB) - Only needed for video decoding
-        # - libnvidia-encode.so - Only needed for video encoding
-        # Containers requiring these can install them directly.
-        
-        # Binaries
-        cp nvidia-driver/nvidia-smi nvidia-driver-libs/usr/bin/
-        cp nvidia-driver/nvidia-modprobe nvidia-driver-libs/usr/bin/
-        
-        # Version file for runtime verification
-        echo "${DRIVER_VERSION}" > nvidia-driver-libs/usr/lib/nvidia/version
-        
-        tar czf nvidia-driver-libs-x86_64.tar.gz -C nvidia-driver-libs .
-        
-        echo "Driver libraries packaged:"
-        ls -lah nvidia-driver-libs/usr/lib/nvidia/
-        ls -lah nvidia-driver-libs/usr/bin/
+     - name: Package NVIDIA driver libraries (x86-64)
+       run: |
+         DRIVER_VERSION=570.86.16
+         
+         mkdir -p nvidia-driver-libs/usr/lib/nvidia
+         mkdir -p nvidia-driver-libs/usr/bin
+         
+         # Essential libraries for CUDA inference (minimal set to keep initrd small)
+         # libcuda.so - CUDA driver API (required for all GPU compute) ~68MB
+         cp nvidia-driver/libcuda.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
+         # libnvidia-ml.so - NVML for nvidia-smi and GPU monitoring ~2MB
+         cp nvidia-driver/libnvidia-ml.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
+         # libnvidia-ptxjitcompiler.so - PTX JIT compilation ~37MB
+         cp nvidia-driver/libnvidia-ptxjitcompiler.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
+         
+         # Small utility libraries
+         cp nvidia-driver/libnvidia-allocator.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
+         cp nvidia-driver/libnvidia-cfg.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
+         
+         # Note: The following large libraries are NOT included to keep initrd small:
+         # - libnvidia-nvvm.so (~79MB) - Only needed for CUDA runtime compilation
+         # - libnvidia-gpucomp.so (~61MB) - Only needed for some compute workloads
+         # - libnvidia-opencl.so (~63MB) - Only needed for OpenCL (not CUDA)
+         # - libnvcuvid.so (~16MB) - Only needed for video decoding
+         # - libnvidia-encode.so - Only needed for video encoding
+         # Containers requiring these can install them directly.
+         
+         # Binaries
+         cp nvidia-driver/nvidia-smi nvidia-driver-libs/usr/bin/
+         cp nvidia-driver/nvidia-modprobe nvidia-driver-libs/usr/bin/
+         
+         # Version file for runtime verification
+         echo "${DRIVER_VERSION}" > nvidia-driver-libs/usr/lib/nvidia/version
+         
+         tar czf nvidia-driver-libs-x86_64.tar.gz -C nvidia-driver-libs .
+         
+         echo "Driver libraries packaged:"
+         ls -lah nvidia-driver-libs/usr/lib/nvidia/
+         ls -lah nvidia-driver-libs/usr/bin/
      - name: Create release
        id: create_release
        uses: actions/create-release@v1
