@@ -15,13 +15,15 @@ jobs:
        with:
         fetch-depth: 1
      - name: Install build tools
-       run: sudo apt install -y build-essential flex bison libssl-dev libelf-dev bc gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
+       run: sudo apt install -y build-essential flex bison libssl-dev libelf-dev zlib1g-dev bc gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
      - name: Configure (aarch64)
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make ch_defconfig
      - name: Build (aarch64)
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make Image.gz -j `nproc`
      - name: Build kernel modules (aarch64)
-       run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make modules -j `nproc`
+       # HOSTLDFLAGS=-static makes scripts tools (modpost, etc.) statically linked
+       # so they don't depend on the build host's glibc version. -lz needed for objtool.
+       run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTLDFLAGS="-static -lz" make modules -j `nproc`
      - name: Package kernel headers (aarch64)
        run: |
          KVER=$(ARCH=arm64 make -s kernelrelease)
@@ -49,7 +51,9 @@ jobs:
      - name: Build kernel (x86-64)
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
      - name: Build kernel modules (x86-64)
-       run: make modules -j `nproc`
+       # HOSTLDFLAGS=-static makes scripts tools (modpost, etc.) statically linked
+       # so they don't depend on the build host's glibc version. -lz needed for objtool.
+       run: HOSTLDFLAGS="-static -lz" make modules -j `nproc`
      - name: Package kernel headers (x86-64)
        run: |
          KVER=$(make -s kernelrelease)
