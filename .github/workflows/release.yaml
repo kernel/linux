@@ -9,6 +9,9 @@ jobs:
     if: github.event_name == 'create' && github.event.ref_type == 'tag'
     name: Release
     runs-on: [self-hosted, linux, x64, kvm]
+    env:
+      # Static link host tools so they don't depend on build host's glibc version
+      HOSTLDFLAGS: "-static -lz"
     steps:
      - name: Code checkout
        uses: actions/checkout@v4
@@ -21,9 +24,7 @@ jobs:
      - name: Build (aarch64)
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make Image.gz -j `nproc`
      - name: Build kernel modules (aarch64)
-       # HOSTLDFLAGS=-static makes scripts tools (modpost, etc.) statically linked
-       # so they don't depend on the build host's glibc version. -lz needed for objtool.
-       run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTLDFLAGS="-static -lz" make modules -j `nproc`
+       run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make modules -j `nproc`
      - name: Package kernel headers (aarch64)
        run: |
          KVER=$(ARCH=arm64 make -s kernelrelease)
@@ -51,9 +52,7 @@ jobs:
      - name: Build kernel (x86-64)
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
      - name: Build kernel modules (x86-64)
-       # HOSTLDFLAGS=-static makes scripts tools (modpost, etc.) statically linked
-       # so they don't depend on the build host's glibc version. -lz needed for objtool.
-       run: HOSTLDFLAGS="-static -lz" make modules -j `nproc`
+       run: make modules -j `nproc`
      - name: Package kernel headers (x86-64)
        run: |
          KVER=$(make -s kernelrelease)
@@ -72,6 +71,28 @@ jobs:
          
          echo "Kernel headers packaged for ${KVER}:"
          du -sh kernel-headers-x86_64.tar.gz
+     - name: Verify tools are statically linked
+       run: |
+         echo "Checking that host tools are statically linked..."
+         FAILED=0
+         for tool in kernel-headers-x86/scripts/basic/fixdep \
+                     kernel-headers-x86/scripts/mod/modpost \
+                     kernel-headers-x86/tools/objtool/objtool; do
+           if [ -f "$tool" ]; then
+             if file "$tool" | grep -q "statically linked"; then
+               echo "✓ $tool: statically linked"
+             else
+               echo "✗ $tool: DYNAMICALLY LINKED - this will cause glibc compatibility issues!"
+               file "$tool"
+               FAILED=1
+             fi
+           fi
+         done
+         if [ $FAILED -eq 1 ]; then
+           echo "ERROR: Some tools are dynamically linked. Check HOSTLDFLAGS setting."
+           exit 1
+         fi
+         echo "All tools verified as statically linked."
      - name: Create release
        id: create_release
        uses: actions/create-release@v1
