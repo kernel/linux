@@ -72,79 +72,6 @@ jobs:
          
          echo "Kernel headers packaged for ${KVER}:"
          du -sh kernel-headers-x86_64.tar.gz
-     - name: Clone NVIDIA open-gpu-kernel-modules
-       run: git clone --depth 1 --branch 570.86.16 https://github.com/NVIDIA/open-gpu-kernel-modules.git
-     - name: Build NVIDIA modules (x86-64)
-       run: |
-         cd open-gpu-kernel-modules
-         make modules KERNEL_UNAME=$(cd .. && make -s kernelrelease) SYSSRC=$(pwd)/.. -j $(nproc)
-     - name: Download NVIDIA driver for firmware
-       run: |
-         DRIVER_VERSION=570.86.16
-         wget -q https://download.nvidia.com/XFree86/Linux-x86_64/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run
-         chmod +x NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run
-         ./NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run --extract-only --target nvidia-driver
-     - name: Package NVIDIA modules (x86-64)
-       run: |
-         KVER=$(make -s kernelrelease)
-         DRIVER_VERSION=570.86.16
-         mkdir -p nvidia-modules/lib/modules/$KVER/kernel/drivers/gpu
-         mkdir -p nvidia-modules/lib/firmware/nvidia/${DRIVER_VERSION}
-         cp open-gpu-kernel-modules/kernel-open/*.ko nvidia-modules/lib/modules/$KVER/kernel/drivers/gpu/
-         cp nvidia-driver/firmware/*.bin nvidia-modules/lib/firmware/nvidia/${DRIVER_VERSION}/
-         tar czf nvidia-modules-x86_64.tar.gz -C nvidia-modules .
-     # ============================================================
-     # NVIDIA DRIVER USERSPACE LIBRARIES
-     # ============================================================
-     # These libraries are injected into containers at VM boot time by hypeman,
-     # eliminating the need for containers to bundle matching NVIDIA drivers.
-     #
-     # When upgrading the driver version:
-     # 1. Check NVIDIA release notes: https://download.nvidia.com/XFree86/Linux-x86_64/
-     # 2. Ensure compatibility with the kernel version being built
-     # 3. Update DRIVER_VERSION in ALL places in this file (search for 570.86.16)
-     # 4. Update NvidiaDriverVersion in hypeman/lib/system/versions.go
-     # 5. Test GPU passthrough thoroughly before deploying
-     # ============================================================
-     - name: Package NVIDIA driver libraries (x86-64)
-       run: |
-         DRIVER_VERSION=570.86.16
-         
-         mkdir -p nvidia-driver-libs/usr/lib/nvidia
-         mkdir -p nvidia-driver-libs/usr/bin
-         
-         # Essential libraries for CUDA inference (minimal set to keep initrd small)
-         # libcuda.so - CUDA driver API (required for all GPU compute) ~68MB
-         cp nvidia-driver/libcuda.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-         # libnvidia-ml.so - NVML for nvidia-smi and GPU monitoring ~2MB
-         cp nvidia-driver/libnvidia-ml.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-         # libnvidia-ptxjitcompiler.so - PTX JIT compilation ~37MB
-         cp nvidia-driver/libnvidia-ptxjitcompiler.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-         
-         # Small utility libraries
-         cp nvidia-driver/libnvidia-allocator.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-         cp nvidia-driver/libnvidia-cfg.so.${DRIVER_VERSION} nvidia-driver-libs/usr/lib/nvidia/
-         
-         # Note: The following large libraries are NOT included to keep initrd small:
-         # - libnvidia-nvvm.so (~79MB) - Only needed for CUDA runtime compilation
-         # - libnvidia-gpucomp.so (~61MB) - Only needed for some compute workloads
-         # - libnvidia-opencl.so (~63MB) - Only needed for OpenCL (not CUDA)
-         # - libnvcuvid.so (~16MB) - Only needed for video decoding
-         # - libnvidia-encode.so - Only needed for video encoding
-         # Containers requiring these can install them directly.
-         
-         # Binaries
-         cp nvidia-driver/nvidia-smi nvidia-driver-libs/usr/bin/
-         cp nvidia-driver/nvidia-modprobe nvidia-driver-libs/usr/bin/
-         
-         # Version file for runtime verification
-         echo "${DRIVER_VERSION}" > nvidia-driver-libs/usr/lib/nvidia/version
-         
-         tar czf nvidia-driver-libs-x86_64.tar.gz -C nvidia-driver-libs .
-         
-         echo "Driver libraries packaged:"
-         ls -lah nvidia-driver-libs/usr/lib/nvidia/
-         ls -lah nvidia-driver-libs/usr/bin/
      - name: Create release
        id: create_release
        uses: actions/create-release@v1
@@ -172,15 +99,6 @@ jobs:
          asset_path: vmlinux
          asset_name: vmlinux-x86_64
          asset_content_type: application/octet-stream
-     - name: Upload NVIDIA modules for x86_64
-       uses: actions/upload-release-asset@v1
-       env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-       with:
-         upload_url: ${{ steps.create_release.outputs.upload_url }}
-         asset_path: nvidia-modules-x86_64.tar.gz
-         asset_name: nvidia-modules-x86_64.tar.gz
-         asset_content_type: application/gzip
      - name: Upload kernel headers for x86_64
        uses: actions/upload-release-asset@v1
        env:
@@ -198,15 +116,6 @@ jobs:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: kernel-headers-aarch64.tar.gz
          asset_name: kernel-headers-aarch64.tar.gz
-         asset_content_type: application/gzip
-     - name: Upload NVIDIA driver libraries for x86_64
-       uses: actions/upload-release-asset@v1
-       env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-       with:
-         upload_url: ${{ steps.create_release.outputs.upload_url }}
-         asset_path: nvidia-driver-libs-x86_64.tar.gz
-         asset_name: nvidia-driver-libs-x86_64.tar.gz
          asset_content_type: application/gzip
      - name: Upload Image.gz for aarch64
        uses: actions/upload-release-asset@v1
