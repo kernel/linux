@@ -20,6 +20,26 @@ jobs:
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make ch_defconfig
      - name: Build (aarch64)
        run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make Image.gz -j `nproc`
+     - name: Build kernel modules (aarch64)
+       run: ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make modules -j `nproc`
+     - name: Package kernel headers (aarch64)
+       run: |
+         KVER=$(ARCH=arm64 make -s kernelrelease)
+         HEADERS_DIR="$(pwd)/kernel-headers-arm64"
+         
+         # Use the kernel's built-in script via make run-command to ensure proper env vars
+         mkdir -p "${HEADERS_DIR}"
+         ARCH=arm64 make run-command KBUILD_RUN_COMMAND="\${srctree}/scripts/package/install-extmod-build ${HEADERS_DIR}"
+         
+         # Add System.map and .config
+         cp System.map "${HEADERS_DIR}/"
+         cp .config "${HEADERS_DIR}/"
+         
+         # Package just the headers contents (flat structure)
+         tar czf kernel-headers-aarch64.tar.gz -C "${HEADERS_DIR}" .
+         
+         echo "Kernel headers packaged for ${KVER} (aarch64):"
+         du -sh kernel-headers-aarch64.tar.gz
      - name: Configure (riscv64)
        run: ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- make ch_defconfig
      - name: Build (riscv64)
@@ -30,6 +50,24 @@ jobs:
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
      - name: Build kernel modules (x86-64)
        run: make modules -j `nproc`
+     - name: Package kernel headers (x86-64)
+       run: |
+         KVER=$(make -s kernelrelease)
+         HEADERS_DIR="$(pwd)/kernel-headers-x86"
+         
+         # Use the kernel's built-in script via make run-command to ensure proper env vars
+         mkdir -p "${HEADERS_DIR}"
+         make run-command KBUILD_RUN_COMMAND="\${srctree}/scripts/package/install-extmod-build ${HEADERS_DIR}"
+         
+         # Add System.map and .config (useful for debugging and some build scenarios)
+         cp System.map "${HEADERS_DIR}/"
+         cp .config "${HEADERS_DIR}/"
+         
+         # Package just the headers contents (flat structure)
+         tar czf kernel-headers-x86_64.tar.gz -C "${HEADERS_DIR}" .
+         
+         echo "Kernel headers packaged for ${KVER}:"
+         du -sh kernel-headers-x86_64.tar.gz
      - name: Clone NVIDIA open-gpu-kernel-modules
        run: git clone --depth 1 --branch 570.86.16 https://github.com/NVIDIA/open-gpu-kernel-modules.git
      - name: Build NVIDIA modules (x86-64)
@@ -138,6 +176,24 @@ jobs:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: nvidia-modules-x86_64.tar.gz
          asset_name: nvidia-modules-x86_64.tar.gz
+         asset_content_type: application/gzip
+     - name: Upload kernel headers for x86_64
+       uses: actions/upload-release-asset@v1
+       env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+       with:
+         upload_url: ${{ steps.create_release.outputs.upload_url }}
+         asset_path: kernel-headers-x86_64.tar.gz
+         asset_name: kernel-headers-x86_64.tar.gz
+         asset_content_type: application/gzip
+     - name: Upload kernel headers for aarch64
+       uses: actions/upload-release-asset@v1
+       env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+       with:
+         upload_url: ${{ steps.create_release.outputs.upload_url }}
+         asset_path: kernel-headers-aarch64.tar.gz
+         asset_name: kernel-headers-aarch64.tar.gz
          asset_content_type: application/gzip
      - name: Upload NVIDIA driver libraries for x86_64
        uses: actions/upload-release-asset@v1
