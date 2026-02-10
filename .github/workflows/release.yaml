@@ -25,11 +25,17 @@ jobs:
        run: make ch_defconfig
      - name: Build kernel (x86-64)
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
+     - name: Generate app token
+       id: app-token
+       uses: actions/create-github-app-token@v1
+       with:
+         app-id: ${{ secrets.ADMIN_APP_ID }}
+         private-key: ${{ secrets.ADMIN_APP_PRIVATE_KEY }}
      - name: Create release
        id: create_release
        uses: actions/create-release@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          tag_name: ${{ github.ref }}
          release_name: ${{ github.ref }}
@@ -37,7 +43,7 @@ jobs:
      - name: Upload bzImage for x86_64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: arch/x86/boot/bzImage
@@ -46,7 +52,7 @@ jobs:
      - name: Upload vmlinux for x86_64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: vmlinux
@@ -55,7 +61,7 @@ jobs:
      - name: Upload Image.gz for aarch64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: arch/arm64/boot/Image.gz
@@ -64,7 +70,7 @@ jobs:
      - name: Upload Image for aarch64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: arch/arm64/boot/Image
@@ -73,7 +79,7 @@ jobs:
      - name: Upload Image.gz for riscv64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: arch/riscv/boot/Image.gz
@@ -82,7 +88,7 @@ jobs:
      - name: Upload Image for riscv64
        uses: actions/upload-release-asset@v1
        env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
        with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
          asset_path: arch/riscv/boot/Image
