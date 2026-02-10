@@ -7,12 +7,6 @@ jobs:
     name: Release
     runs-on: ubuntu-22.04
     steps:
-     - name: Generate app token
-       id: app-token
-       uses: actions/create-github-app-token@v1
-       with:
-         app-id: ${{ secrets.ADMIN_APP_ID }}
-         private-key: ${{ secrets.ADMIN_APP_PRIVATE_KEY }}
      - name: Code checkout
        uses: actions/checkout@v4
        with:
@@ -31,6 +25,12 @@ jobs:
        run: make ch_defconfig
      - name: Build kernel (x86-64)
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
+     - name: Generate app token
+       id: app-token
+       uses: actions/create-github-app-token@v1
+       with:
+         app-id: ${{ secrets.ADMIN_APP_ID }}
+         private-key: ${{ secrets.ADMIN_APP_PRIVATE_KEY }}
      - name: Create release
        id: create_release
        uses: actions/create-release@v1
