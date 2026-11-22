@@ -27,7 +27,7 @@ jobs:
        run: CFLAGS="-Wa,-mx86-used-note=no" make bzImage -j `nproc`
      - name: Generate app token
        id: app-token
-       uses: actions/create-github-app-token@v1
+       uses: actions/create-github-app-token@v3.3.0
        with:
          app-id: ${{ secrets.ADMIN_APP_ID }}
          private-key: ${{ secrets.ADMIN_APP_PRIVATE_KEY }}
